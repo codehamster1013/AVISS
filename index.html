@@ -1,0 +1,1661 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AVISS - A Very Intelligent Secretary Stuff</title>
+  <style>
+    /* 기본 변수 */
+    :root {
+      --bg-light: #ffffff;
+      --text-light: #2c2c2c;
+      --accent-light: #4B7BEC;
+      --bg-dark: #121212;
+      --text-dark: #e0e0e0;
+      --accent-dark: #4B7BEC;
+      --bg-blue: #e3f2fd;
+      --text-blue: #0066ff;
+      --accent-blue: #1976d2;
+      --font-round: 'Comfortaa', 'Nunito', 'Quicksand', 'Rubik', sans-serif;
+      --border-radius: 16px;
+      --transition: 0.3s;
+      --golden: 61.8vw;
+      --cell-min-height: 80px;
+      --cell-padding: 4px;
+    }
+    
+    /* 전반 스타일 */
+    body {
+      margin: 0;
+      font-family: var(--font-round);
+      background: var(--bg-light);
+      color: var(--text-light);
+      transition: background var(--transition), color var(--transition);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    body.theme-dark { background: var(--bg-dark); color: var(--text-dark); }
+    body.theme-blue { background: var(--bg-blue); color: var(--text-blue); }
+    
+    header {
+      width: 100%;
+      background: var(--accent-light);
+      color: #fff;
+      padding: 1rem 0;
+      text-align: center;
+      font-size: 1.8rem;
+      border-bottom-left-radius: var(--border-radius);
+      border-bottom-right-radius: var(--border-radius);
+    }
+    body.theme-dark header { background: var(--accent-dark); }
+    body.theme-blue header { background: var(--accent-blue); }
+    
+    /* 상태 표시 */
+    .status-bar {
+      width: var(--golden);
+      background: rgba(75, 123, 236, 0.1);
+      padding: 0.5rem;
+      border-radius: var(--border-radius);
+      margin: 0.5rem 0;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+    
+    /* 내비게이션 */
+    nav {
+      display: flex;
+      width: var(--golden);
+      margin: 1rem 0;
+      border-radius: var(--border-radius);
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    nav button {
+      flex: 1;
+      padding: 0.8rem;
+      border: none;
+      background: #f0f0f0;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background var(--transition);
+    }
+    nav button.active, nav button:hover {
+      background: var(--accent-light);
+      color: #fff;
+    }
+    body.theme-dark nav button { background: #2e2e2e; color: var(--text-dark); }
+    body.theme-dark nav button.active, body.theme-dark nav button:hover { background: var(--accent-dark); }
+    body.theme-blue nav button.active, body.theme-blue nav button:hover { background: var(--accent-blue); }
+    
+    /* 섹션 공통 */
+    section { display: none; width: var(--golden); margin-bottom: 1rem; }
+    section.active { display: block; }
+    
+    /* 채팅 */
+    #chat-window {
+      height: 250px;
+      background: rgba(255,255,255,0.8);
+      border-radius: var(--border-radius);
+      padding: 1rem;
+      overflow-y: auto;
+      box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
+      margin-bottom: 1rem;
+    }
+    body.theme-dark #chat-window { background: rgba(30,30,30,0.8); }
+    
+    .message { 
+      margin: 0.5rem 0; 
+      padding: 0.5rem;
+      border-radius: 8px;
+      max-width: 80%;
+    }
+    .message.user { 
+      background: var(--accent-light); 
+      color: #fff; 
+      margin-left: auto;
+    }
+    .message.bot { 
+      background: #e8f5e8; 
+      color: #2e7d32; 
+    }
+    body.theme-dark .message.bot { background: #1b3b1b; color: #81c784; }
+    
+    .chat-input-container { 
+      display: flex; 
+      margin-top: 0.5rem; 
+      align-items: center; 
+      gap: 0.5rem;
+    }
+    #chat-input {
+      flex: 1;
+      padding: 0.8rem;
+      border: 1px solid #ccc;
+      border-radius: var(--border-radius);
+      font-family: var(--font-round);
+    }
+    
+    .icon-btn {
+      width: 48px; 
+      height: 48px;
+      border: none;
+      border-radius: 50%;
+      background: var(--accent-light);
+      color: #fff;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .icon-btn:hover { transform: scale(1.05); }
+    .icon-btn.recording { background: #ff6b6b; animation: pulse 1s infinite; }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    /* 캘린더 */
+    .calendar-container { display: flex; flex-direction: column; }
+    .calendar-header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      margin-bottom: 1rem; 
+      padding: 0 1rem;
+    }
+    .calendar-header button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: var(--border-radius);
+      background: var(--accent-light);
+      color: #fff;
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+    body.theme-dark .calendar-header button { background: var(--accent-dark); }
+    body.theme-blue .calendar-header button { background: var(--accent-blue); }
+    
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 5px;
+      margin-bottom: 1rem;
+    }
+    .calendar-cell {
+      background: #fff;
+      border-radius: var(--border-radius);
+      padding: var(--cell-padding);
+      min-height: var(--cell-min-height);
+      position: relative;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    body.theme-dark .calendar-cell { background: #1e1e1e; }
+    .calendar-cell:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .calendar-cell.today { border: 3px solid var(--accent-light); }
+    .calendar-cell .date-num { font-weight: bold; text-align: right; margin-bottom: 4px; }
+    
+    .event {
+      display: block;
+      border-radius: var(--border-radius);
+      padding: 2px 6px;
+      margin-top: 4px;
+      font-size: 0.7rem;
+      color: #fff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .event.hospital { background: #ff6b6b; }
+    .event.meeting { background: #4ecdc4; }
+    .event.personal { background: #45b7d1; }
+    .event.default { background: var(--accent-light); }
+    
+    /* 메모장 스타일 */
+    .memo-container {
+      background: rgba(255,255,255,0.8);
+      border-radius: var(--border-radius);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    body.theme-dark .memo-container { background: rgba(30,30,30,0.8); }
+    
+    .memo-header {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      align-items: center;
+    }
+    
+    #memo-search {
+      flex: 1;
+      padding: 0.8rem;
+      border: 1px solid #ccc;
+      border-radius: var(--border-radius);
+      font-family: var(--font-round);
+    }
+    
+    .memo-stats {
+      background: rgba(75, 123, 236, 0.1);
+      padding: 0.5rem;
+      border-radius: var(--border-radius);
+      margin-bottom: 1rem;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+    
+    .memo-categories {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    
+    .category-btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: var(--border-radius);
+      background: #f0f0f0;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all var(--transition);
+    }
+    
+    .category-btn.active, .category-btn:hover {
+      background: var(--accent-light);
+      color: #fff;
+    }
+    
+    body.theme-dark .category-btn { background: #2e2e2e; color: var(--text-dark); }
+    body.theme-dark .category-btn.active, body.theme-dark .category-btn:hover { background: var(--accent-dark); }
+    
+    .memo-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .memo-item {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: var(--border-radius);
+      padding: 1rem;
+      margin-bottom: 0.8rem;
+      cursor: pointer;
+      transition: all var(--transition);
+      border-left: 4px solid var(--accent-light);
+      position: relative;
+    }
+    
+    body.theme-dark .memo-item { 
+      background: rgba(30, 30, 30, 0.9); 
+      border-left-color: var(--accent-dark);
+    }
+    
+    .memo-item:hover {
+      transform: translateX(5px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .memo-item.work { border-left-color: #4ecdc4; }
+    .memo-item.personal { border-left-color: #45b7d1; }
+    .memo-item.idea { border-left-color: #f39c12; }
+    .memo-item.shopping { border-left-color: #e74c3c; }
+    
+    .memo-title {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 0.3rem;
+      color: var(--accent-light);
+    }
+    
+    body.theme-dark .memo-title { color: var(--accent-dark); }
+    
+    .memo-preview {
+      font-size: 0.9rem;
+      opacity: 0.8;
+      margin-bottom: 0.3rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .memo-meta {
+      font-size: 0.8rem;
+      opacity: 0.6;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .memo-actions {
+      display: none;
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      gap: 0.3rem;
+    }
+    
+    .memo-item:hover .memo-actions {
+      display: flex;
+    }
+    
+    .memo-action-btn {
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .memo-action-btn:hover {
+      background: var(--accent-light);
+      color: #fff;
+      transform: scale(1.1);
+    }
+    
+    .memo-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .memo-form input, .memo-form select, .memo-form textarea {
+      padding: 0.8rem;
+      border: 1px solid #ccc;
+      border-radius: var(--border-radius);
+      font-family: var(--font-round);
+      font-size: 1rem;
+    }
+    
+    .memo-form textarea {
+      resize: vertical;
+      min-height: 200px;
+    }
+    
+    .memo-form-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .memo-grid-view {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+    }
+    
+    .memo-grid-view .memo-item {
+      height: fit-content;
+    }
+    
+    /* 팝업 모달 */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(5px);
+    }
+    
+    .modal-content {
+      background-color: var(--bg-light);
+      margin: 5% auto;
+      padding: 2rem;
+      border-radius: var(--border-radius);
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+      animation: modalSlideIn 0.3s ease-out;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    
+    body.theme-dark .modal-content { 
+      background-color: var(--bg-dark); 
+    }
+    
+    body.theme-blue .modal-content { 
+      background-color: var(--bg-blue); 
+    }
+    
+    @keyframes modalSlideIn {
+      from {
+        transform: translateY(-50px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid var(--accent-light);
+    }
+    
+    body.theme-dark .modal-header { 
+      border-bottom-color: var(--accent-dark); 
+    }
+    
+    body.theme-blue .modal-header { 
+      border-bottom-color: var(--accent-blue); 
+    }
+    
+    .modal-title {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: var(--accent-light);
+    }
+    
+    body.theme-dark .modal-title { 
+      color: var(--accent-dark); 
+    }
+    
+    body.theme-blue .modal-title { 
+      color: var(--accent-blue); 
+    }
+    
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+      color: #ff6b6b;
+    }
+    
+    .close-btn:hover {
+      background: rgba(255, 107, 107, 0.1);
+      transform: scale(1.1);
+    }
+    
+    .event-item {
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: var(--border-radius);
+      padding: 1rem;
+      margin-bottom: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all var(--transition);
+      border-left: 4px solid var(--accent-light);
+    }
+    
+    body.theme-dark .event-item { 
+      background: rgba(30, 30, 30, 0.8); 
+      border-left-color: var(--accent-dark);
+    }
+    
+    body.theme-blue .event-item { 
+      background: rgba(255, 255, 255, 0.9); 
+      border-left-color: var(--accent-blue);
+    }
+    
+    .event-item.hospital { border-left-color: #ff6b6b; }
+    .event-item.meeting { border-left-color: #4ecdc4; }
+    .event-item.personal { border-left-color: #45b7d1; }
+    
+    .event-item:hover {
+      transform: translateX(5px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .event-info {
+      flex: 1;
+    }
+    
+    .event-desc {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 0.3rem;
+    }
+    
+    .event-details {
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+    
+    .delete-btn {
+      background: #ff6b6b;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+      margin-left: 1rem;
+    }
+    
+    .delete-btn:hover {
+      background: #ff5252;
+      transform: scale(1.1);
+    }
+    
+    .no-events {
+      text-align: center;
+      padding: 2rem;
+      color: rgba(128, 128, 128, 0.7);
+      font-size: 1.1rem;
+    }
+    
+    /* 통계 */
+    .stats-container {
+      background: rgba(255,255,255,0.8);
+      border-radius: var(--border-radius);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    body.theme-dark .stats-container { background: rgba(30,30,30,0.8); }
+    
+    .stats-item {
+      display: inline-block;
+      margin: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--accent-light);
+      color: #fff;
+      border-radius: var(--border-radius);
+    }
+    
+    /* 설정 */
+    .setting-group { 
+      margin-bottom: 1rem; 
+      background: rgba(255,255,255,0.8);
+      padding: 1rem;
+      border-radius: var(--border-radius);
+    }
+    body.theme-dark .setting-group { background: rgba(30,30,30,0.8); }
+    
+    .setting-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+    .setting-group select, .setting-group input[type="time"] {
+      width: 100%;
+      padding: 0.6rem;
+      border-radius: var(--border-radius);
+      border: 1px solid #ccc;
+      font-family: var(--font-round);
+    }
+    .setting-group .notify-btn {
+      margin-top: 0.5rem;
+      padding: 0.6rem;
+      width: 100%;
+      border: none;
+      border-radius: var(--border-radius);
+      background: var(--accent-light);
+      color: #fff;
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+    .setting-group .notify-btn:hover { background: #3865c7; }
+    body.theme-dark .setting-group .notify-btn { background: var(--accent-dark); }
+    
+    /* 반응형 디자인 */
+    @media (max-width: 768px) {
+      :root { --golden: 95vw; }
+      .calendar-grid { gap: 3px; }
+      .calendar-cell { min-height: 60px; font-size: 0.8rem; }
+      nav button { font-size: 0.9rem; }
+      .modal-content { margin: 10% auto; padding: 1.5rem; }
+      .event-item { flex-direction: column; align-items: flex-start; }
+      .delete-btn { margin-left: 0; margin-top: 0.5rem; align-self: flex-end; }
+      .memo-categories { justify-content: center; }
+      .memo-grid-view { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body class="theme-light">
+  <header>😊 AVISS - A Very Intelligent Secretary Stuff</header>
+  
+  <div class="status-bar" id="status-bar">
+    📊 loading...
+  </div>
+  
+  <nav>
+    <button class="active" onclick="switchTab('chat')">💬 talk</button>
+    <button onclick="switchTab('calendar')">📅 calender</button>
+    <button onclick="switchTab('memo')">📝 memo</button>
+    <button onclick="switchTab('settings')">⚙️ setting</button>
+  </nav>
+
+  <section id="chat" class="active">
+    <div id="chat-window"></div>
+    <div class="chat-input-container">
+      <input id="chat-input" placeholder="예: 6월 15일 3시 치과 예약" onkeydown="if(event.key==='Enter') sendMessage()">
+      <button class="icon-btn" onclick="sendMessage()" title="메시지 전송">send</button>
+      <button class="icon-btn" onclick="startVoice()" title="음성 입력">voice</button>
+      <button class="icon-btn" onclick="clearChat()" title="대화 초기화">🗑️</button>
+    </div> 
+  </section>
+
+  <section id="calendar">
+    <div class="stats-container">
+      <div id="schedule-stats">loading...</div>
+    </div>
+    <div class="calendar-container">
+      <div class="calendar-header">
+        <button onclick="changeMonth(-1)">◀ before</button>
+        <div id="month-year"></div>
+        <button onclick="changeMonth(1)">next ▶</button>
+      </div>
+      <div class="calendar-grid" id="calendar-grid"></div>
+    </div>
+  </section>
+
+  <section id="memo">
+    <div class="memo-container">
+      <div class="memo-header">
+        <input id="memo-search" placeholder="🔍 메모 검색..." onkeyup="searchMemos()">
+        <button class="icon-btn" onclick="addNewMemo()" title="새 메모 작성">✏️</button>
+        <button class="icon-btn" onclick="toggleMemoView()" title="보기 전환" id="view-toggle">📋</button>
+      </div>
+      
+      <div class="memo-stats" id="memo-stats">
+        📊 loading memo stats...
+      </div>
+      
+      <div class="memo-categories">
+        <button class="category-btn active" onclick="filterMemos('all')" data-category="all">📝 전체</button>
+        <button class="category-btn" onclick="filterMemos('work')" data-category="work">💼 업무</button>
+        <button class="category-btn" onclick="filterMemos('personal')" data-category="personal">👤 개인</button>
+        <button class="category-btn" onclick="filterMemos('idea')" data-category="idea">💡 아이디어</button>
+        <button class="category-btn" onclick="filterMemos('shopping')" data-category="shopping">🛒 쇼핑</button>
+      </div>
+      
+      <div class="memo-list" id="memo-list">
+        <!-- 메모들이 여기에 동적으로 추가됩니다 -->
+      </div>
+    </div>
+  </section>
+
+  <section id="settings">
+    <div class="setting-group">
+      <label>theme</label>
+      <select onchange="applyTheme(this.value)" id="theme-select">
+        <option value="theme-light">white mode</option>
+        <option value="theme-dark">dark mode</option>
+        <option value="theme-blue">blue mode</option>
+      </select>
+    </div>
+    
+    <div class="setting-group">
+      <label>데이터 관리</label>
+      <button class="notify-btn" onclick="exportData()">download data</button>
+      <button class="notify-btn" onclick="importData()" style="margin-top: 0.5rem;">insert data</button>
+      <button class="notify-btn" onclick="clearAllData()" style="margin-top: 0.5rem; background: #ff6b6b;">trash all data</button>
+    </div>
+  </section>
+
+  <!-- 메모 작성/편집 모달 -->
+  <div id="memo-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="memo-modal-title">📝 새 메모</div>
+        <button class="close-btn" onclick="closeMemoModal()">✕</button>
+      </div>
+      <div class="memo-form">
+        <input id="memo-title" placeholder="메모 제목..." maxlength="50">
+        <select id="memo-category">
+          <option value="personal">👤 개인</option>
+          <option value="work">💼 업무</option>
+          <option value="idea">💡 아이디어</option>
+          <option value="shopping">🛒 쇼핑</option>
+        </select>
+        <textarea id="memo-content" placeholder="메모 내용을 입력하세요..." rows="10"></textarea>
+        <div class="memo-form-actions">
+          <button class="notify-btn" onclick="saveMemo()" id="save-memo-btn">💾 저장</button>
+          <button class="notify-btn" onclick="closeMemoModal()">취소</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 일정 상세 모달 -->
+  <div id="event-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-title">📅 specific data</div>
+        <button class="close-btn" onclick="closeModal()">✕</button>
+      </div>
+      <div id="modal-events"></div>
+    </div>
+  </div>
+
+  <script>
+    // 전역 변수
+    let current = new Date();
+    const events = {};
+    const memos = [];
+    let currentMemoFilter = 'all';
+    let currentMemoId = null;
+    let isGridView = false;
+    
+    const settings = {
+      theme: 'theme-light',
+      notifyTime: '09:00',
+      autoSave: true
+    };
+
+    // 카테고리 설정
+    const categories = {
+      '병원': {color: 'hospital', icon: '🏥'},
+      '치과': {color: 'hospital', icon: '🦷'},
+      '미용실': {color: 'personal', icon: '💇'},
+      '회의': {color: 'meeting', icon: '💼'},
+      '수업': {color: 'meeting', icon: '📚'},
+      '약속': {color: 'personal', icon: '👥'},
+      '운동': {color: 'personal', icon: '💪'},
+      '쇼핑': {color: 'personal', icon: '🛒'}
+    };
+
+    // 메모 카테고리 아이콘
+    const memoIcons = {
+      personal: '👤',
+      work: '💼',
+      idea: '💡',
+      shopping: '🛒'
+    };
+
+    // 초기화
+    document.addEventListener('DOMContentLoaded', function() {
+      loadEvents();
+      loadMemos();
+      applySettings();
+      renderCalendar();
+      updateStats();
+      renderMemos();
+      updateMemoStats();
+      addSampleData();
+      autoSave();
+      updateStatus('system ready!');
+      
+      // 모달 바깥 클릭시 닫기
+      document.getElementById('event-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+          closeModal();
+        }
+      });
+
+      document.getElementById('memo-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+          closeMemoModal();
+        }
+      });
+    });
+
+    // 상태 업데이트
+    function updateStatus(message) {
+      document.getElementById('status-bar').textContent = `📊 ${message}`;
+    }
+
+    // 탭 전환
+    function switchTab(id) {
+      document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      if (id === 'calendar') {
+        renderCalendar();
+        updateStats();
+      } else if (id === 'memo') {
+        renderMemos();
+        updateMemoStats();
+      }
+    }
+
+    // 테마 적용
+    function applyTheme(theme) {
+      document.body.className = theme;
+      settings.theme = theme;
+      saveEvents();
+      updateStatus(`theme has changed to ${theme.replace('theme-', '')}`);
+    }
+
+    // 설정 적용
+    function applySettings() {
+      document.body.className = settings.theme;
+      document.getElementById('theme-select').value = settings.theme;
+    }
+
+    // 메시지 전송
+    function sendMessage() {
+      const input = document.getElementById('chat-input');
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      // 성능 측정 시작
+      const startTime = performance.now();
+      
+      addChatMessage('user', `😊 me: ${msg}`);
+      
+      // 메모 관련 명령어 체크
+      if (msg.includes('메모') && (msg.includes('추가') || msg.includes('작성') || msg.includes('써'))) {
+        processMemoCommand(msg);
+      } else {
+        processUserInput(msg);
+      }
+      
+      // 성능 측정 완료
+      const endTime = performance.now();
+      console.log(`처리 시간: ${(endTime - startTime).toFixed(2)}ms`);
+      
+      input.value = '';
+    }
+
+    // 메모 명령어 처리
+    function processMemoCommand(text) {
+      // "업무 메모 추가 회의 준비사항" 같은 형식 처리
+      const memoMatch = text.match(/(업무|개인|아이디어|쇼핑)?\s*메모\s*(추가|작성|써)\s*(.+)/);
+      
+      if (memoMatch) {
+        const category = memoMatch[1] ? 
+          (memoMatch[1] === '업무' ? 'work' : 
+           memoMatch[1] === '개인' ? 'personal' :
+           memoMatch[1] === '아이디어' ? 'idea' :
+           memoMatch[1] === '쇼핑' ? 'shopping' : 'personal') : 'personal';
+        const content = memoMatch[3].trim();
+        
+        const newMemo = {
+          id: Date.now(),
+          title: content.length > 20 ? content.substring(0, 20) + '...' : content,
+          content: content,
+          category: category,
+          created: new Date(),
+          updated: new Date()
+        };
+        
+        memos.unshift(newMemo);
+        saveMemos();
+        renderMemos();
+        updateMemoStats();
+        
+        const categoryIcon = memoIcons[category];
+        addChatMessage('bot', `🤖 ${categoryIcon} 메모가 추가되었습니다: "${newMemo.title}"`);
+        updateStatus(`새 메모가 추가되었습니다: ${newMemo.title}`);
+      } else {
+        addChatMessage('bot', '🤖 메모 형식을 확인해주세요. 예: "업무 메모 추가 회의 준비사항"');
+      }
+    }
+
+    // 사용자 입력 처리 (기존 일정 관련)
+    function processUserInput(text) {
+      const result = parseMsg(text);
+      
+      if (result.date && result.desc) {
+        const key = formatDateKey(result.date);
+        if (!events[key]) events[key] = [];
+        
+        const eventData = {
+          desc: result.desc,
+          category: result.category,
+          time: result.time || null,
+          created: new Date(),
+          id: Date.now() + Math.random()
+        };
+        
+        events[key].push(eventData);
+        
+        const categoryIcon = categories[result.category]?.icon || '📝';
+        const timeStr = result.time ? ` ${result.time}에` : '';
+        
+        addChatMessage('bot', 
+          `🤖 ${categoryIcon} "${result.desc}" data ${formatDateString(result.date)}${timeStr} has been added to calender`);
+        
+        saveEvents();
+        renderCalendar();
+        updateStats();
+        updateStatus(`new data is on: ${result.desc}`);
+      } else {
+        addChatMessage('bot', '🤖 ERROR: failed to understand');
+        updateStatus('일정 인식에 실패했습니다.');
+      }
+    }
+
+    // 채팅 메시지 추가
+    function addChatMessage(type, message) {
+      const chatWin = document.getElementById('chat-window');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `message ${type}`;
+      msgDiv.textContent = message;
+      chatWin.appendChild(msgDiv);
+      chatWin.scrollTop = chatWin.scrollHeight;
+    }
+
+    // 음성 인식
+    function startVoice() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        addChatMessage('bot', '🤖 ERROR: failed to find voice on this browser');
+        return;
+      }
+
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      const voiceBtn = document.querySelector('button[onclick="startVoice()"]');
+      
+      recognition.lang = 'ko-KR';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        voiceBtn.classList.add('recording');
+        updateStatus('inputting voices.');
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById('chat-input').value = transcript;
+        addChatMessage('user', `🎤 voice: ${transcript}`);
+        
+        // 메모 관련 명령어 체크
+        if (transcript.includes('메모') && (transcript.includes('추가') || transcript.includes('작성') || transcript.includes('써'))) {
+          processMemoCommand(transcript);
+        } else {
+          processUserInput(transcript);
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error('voice input error:', event.error);
+        addChatMessage('bot', '🤖 ERROR: failed to add voice');
+        updateStatus('음성 인식 오류가 발생했습니다.');
+      };
+
+      recognition.onend = () => {
+        voiceBtn.classList.remove('recording');
+        updateStatus('음성 인식이 완료되었습니다.');
+      };
+
+      recognition.start();
+    }
+
+    // 고급 자연어 처리
+    function parseMsg(text) {
+      const now = new Date();
+      const d = new Date(now);
+      
+      // 시간 초기화
+      d.setHours(0, 0, 0, 0);
+      
+      // 날짜 파싱
+      if (/내일/.test(text)) {
+        d.setDate(now.getDate() + 1);
+      } else if (/모레/.test(text)) {
+        d.setDate(now.getDate() + 2);
+      } else if (/오늘/.test(text)) {
+        // 오늘 유지
+      } else {
+        const dateMatch = text.match(/(\d{1,2})월\s*(\d{1,2})일/);
+        if (dateMatch) {
+          const month = parseInt(dateMatch[1]) - 1;
+          const day = parseInt(dateMatch[2]);
+          d.setMonth(month, day);
+          
+          // 올해가 아닌 경우 내년으로 설정
+          if (d < now) {
+            d.setFullYear(now.getFullYear() + 1);
+          }
+        } else {
+          return {date: null, desc: null, category: '일반', time: null};
+        }
+      }
+      
+      // 시간 파싱
+      let timeStr = null;
+      const timeMatch = text.match(/(\d{1,2})[시:](\d{2})?/);
+      if (timeMatch) {
+        const hour = parseInt(timeMatch[1]);
+        const minute = parseInt(timeMatch[2] || 0);
+        timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+      }
+      
+      // 카테고리 분류
+      let category = '일반';
+      for (const [key, value] of Object.entries(categories)) {
+        if (text.includes(key)) {
+          category = key;
+          break;
+        }
+      }
+      
+      // 설명 추출
+      let desc = text
+        .replace(/.*?(오늘|내일|모레|\d+월\s*\d+일)/, '')
+        .replace(/\d+[시:](\d+)?/, '')
+        .trim();
+      
+      if (!desc) {
+        desc = category === '일반' ? '일정' : category;
+      }
+      
+      return {date: d, desc, category, time: timeStr};
+    }
+
+    // === 메모 관련 함수들 ===
+    
+    // 새 메모 추가
+    function addNewMemo() {
+      currentMemoId = null;
+      document.getElementById('memo-modal-title').textContent = '📝 새 메모';
+      document.getElementById('memo-title').value = '';
+      document.getElementById('memo-category').value = 'personal';
+      document.getElementById('memo-content').value = '';
+      document.getElementById('save-memo-btn').textContent = '💾 저장';
+      document.getElementById('memo-modal').style.display = 'block';
+      updateStatus('새 메모 작성 중...');
+    }
+
+    // 메모 저장
+    function saveMemo() {
+      const title = document.getElementById('memo-title').value.trim();
+      const category = document.getElementById('memo-category').value;
+      const content = document.getElementById('memo-content').value.trim();
+      
+      if (!title || !content) {
+        alert('제목과 내용을 모두 입력해주세요.');
+        return;
+      }
+      
+      if (currentMemoId) {
+        // 기존 메모 수정
+        const memoIndex = memos.findIndex(m => m.id === currentMemoId);
+        if (memoIndex !== -1) {
+          memos[memoIndex] = {
+            ...memos[memoIndex],
+            title: title,
+            category: category,
+            content: content,
+            updated: new Date()
+          };
+          addChatMessage('bot', `🤖 메모가 수정되었습니다: "${title}"`);
+          updateStatus(`메모가 수정되었습니다: ${title}`);
+        }
+      } else {
+        // 새 메모 추가
+        const newMemo = {
+          id: Date.now(),
+          title: title,
+          content: content,
+          category: category,
+          created: new Date(),
+          updated: new Date()
+        };
+        
+        memos.unshift(newMemo);
+        addChatMessage('bot', `🤖 새 메모가 추가되었습니다: "${title}"`);
+        updateStatus(`새 메모가 추가되었습니다: ${title}`);
+      }
+      
+      saveMemos();
+      renderMemos();
+      updateMemoStats();
+      closeMemoModal();
+    }
+
+    // 메모 편집
+    function editMemo(id) {
+      const memo = memos.find(m => m.id === id);
+      if (!memo) return;
+      
+      currentMemoId = id;
+      document.getElementById('memo-modal-title').textContent = '📝 메모 편집';
+      document.getElementById('memo-title').value = memo.title;
+      document.getElementById('memo-category').value = memo.category;
+      document.getElementById('memo-content').value = memo.content;
+      document.getElementById('save-memo-btn').textContent = '💾 수정';
+      document.getElementById('memo-modal').style.display = 'block';
+      updateStatus(`메모 편집 중: ${memo.title}`);
+    }
+
+    // 메모 삭제
+    function deleteMemo(id) {
+      const memo = memos.find(m => m.id === id);
+      if (!memo) return;
+      
+      if (confirm(`"${memo.title}" 메모를 삭제하시겠습니까?`)) {
+        const index = memos.findIndex(m => m.id === id);
+        memos.splice(index, 1);
+        saveMemos();
+        renderMemos();
+        updateMemoStats();
+        addChatMessage('bot', `🤖 메모가 삭제되었습니다: "${memo.title}"`);
+        updateStatus(`메모가 삭제되었습니다: ${memo.title}`);
+      }
+    }
+
+    // 메모 모달 닫기
+    function closeMemoModal() {
+      document.getElementById('memo-modal').style.display = 'none';
+      currentMemoId = null;
+      updateStatus('메모 작성을 취소했습니다.');
+    }
+
+    // 메모 렌더링
+    function renderMemos() {
+      const memoList = document.getElementById('memo-list');
+      const searchTerm = document.getElementById('memo-search').value.toLowerCase();
+      
+      let filteredMemos = memos.filter(memo => {
+        const matchesCategory = currentMemoFilter === 'all' || memo.category === currentMemoFilter;
+        const matchesSearch = !searchTerm || 
+          memo.title.toLowerCase().includes(searchTerm) || 
+          memo.content.toLowerCase().includes(searchTerm);
+        return matchesCategory && matchesSearch;
+      });
+      
+      if (isGridView) {
+        memoList.className = 'memo-list memo-grid-view';
+      } else {
+        memoList.className = 'memo-list';
+      }
+      
+      if (filteredMemos.length === 0) {
+        memoList.innerHTML = '<div class="no-events">📝 메모가 없습니다.</div>';
+        return;
+      }
+      
+      memoList.innerHTML = filteredMemos.map(memo => {
+        const categoryIcon = memoIcons[memo.category] || '📝';
+        const createdDate = new Date(memo.created).toLocaleDateString('ko-KR');
+        const preview = memo.content.length > 100 ? memo.content.substring(0, 100) + '...' : memo.content;
+        
+        return `
+          <div class="memo-item ${memo.category}" onclick="viewMemo(${memo.id})">
+            <div class="memo-actions">
+              <button class="memo-action-btn" onclick="event.stopPropagation(); editMemo(${memo.id})" title="편집">✏️</button>
+              <button class="memo-action-btn" onclick="event.stopPropagation(); deleteMemo(${memo.id})" title="삭제">🗑️</button>
+            </div>
+            <div class="memo-title">${categoryIcon} ${memo.title}</div>
+            <div class="memo-preview">${preview}</div>
+            <div class="memo-meta">
+              <span>${createdDate}</span>
+              <span>${getCategoryName(memo.category)}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 메모 상세 보기
+    function viewMemo(id) {
+      const memo = memos.find(m => m.id === id);
+      if (!memo) return;
+      
+      const categoryIcon = memoIcons[memo.category] || '📝';
+      
+      // 임시로 일정 모달을 사용해서 메모 내용 표시
+      const modal = document.getElementById('event-modal');
+      const modalTitle = document.getElementById('modal-title');
+      const modalEvents = document.getElementById('modal-events');
+      
+      modalTitle.textContent = `${categoryIcon} ${memo.title}`;
+      
+      modalEvents.innerHTML = `
+        <div style="padding: 1rem;">
+          <div style="margin-bottom: 1rem; padding: 0.5rem; background: rgba(75, 123, 236, 0.1); border-radius: 8px; font-size: 0.9rem;">
+            📅 작성: ${new Date(memo.created).toLocaleString('ko-KR')}<br>
+            📝 수정: ${new Date(memo.updated).toLocaleString('ko-KR')}<br>
+            🏷️ 카테고리: ${getCategoryName(memo.category)}
+          </div>
+          <div style="white-space: pre-wrap; line-height: 1.6; font-size: 1rem;">
+            ${memo.content}
+          </div>
+          <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+            <button class="notify-btn" onclick="closeModal(); editMemo(${memo.id})">✏️ 편집</button>
+            <button class="notify-btn" onclick="closeModal(); deleteMemo(${memo.id})" style="background: #ff6b6b;">🗑️ 삭제</button>
+          </div>
+        </div>
+      `;
+      
+      modal.style.display = 'block';
+      updateStatus(`메모 보기: ${memo.title}`);
+    }
+
+    // 메모 검색
+    function searchMemos() {
+      renderMemos();
+    }
+
+    // 메모 필터링
+    function filterMemos(category) {
+      currentMemoFilter = category;
+      
+      // 카테고리 버튼 활성화 상태 변경
+      document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.querySelector(`[data-category="${category}"]`).classList.add('active');
+      
+      renderMemos();
+      updateMemoStats();
+    }
+
+    // 메모 보기 전환 (리스트/그리드)
+    function toggleMemoView() {
+      isGridView = !isGridView;
+      const toggleBtn = document.getElementById('view-toggle');
+      toggleBtn.textContent = isGridView ? '📋' : '⊞';
+      renderMemos();
+      updateStatus(isGridView ? '그리드 보기로 전환' : '리스트 보기로 전환');
+    }
+
+    // 메모 통계 업데이트
+    function updateMemoStats() {
+      const totalMemos = memos.length;
+      const workMemos = memos.filter(m => m.category === 'work').length;
+      const personalMemos = memos.filter(m => m.category === 'personal').length;
+      const ideaMemos = memos.filter(m => m.category === 'idea').length;
+      const shoppingMemos = memos.filter(m => m.category === 'shopping').length;
+      
+      const thisWeek = new Date();
+      thisWeek.setDate(thisWeek.getDate() - 7);
+      const recentMemos = memos.filter(m => new Date(m.created) >= thisWeek).length;
+      
+      document.getElementById('memo-stats').innerHTML = `
+        <span class="stats-item">📝 전체: ${totalMemos}개</span>
+        <span class="stats-item">💼 업무: ${workMemos}개</span>
+        <span class="stats-item">👤 개인: ${personalMemos}개</span>
+        <span class="stats-item">💡 아이디어: ${ideaMemos}개</span>
+        <span class="stats-item">🛒 쇼핑: ${shoppingMemos}개</span>
+        <span class="stats-item">📊 최근 7일: ${recentMemos}개</span>
+      `;
+    }
+
+    // 카테고리 이름 반환
+    function getCategoryName(category) {
+      const categoryNames = {
+        work: '💼 업무',
+        personal: '👤 개인',
+        idea: '💡 아이디어',
+        shopping: '🛒 쇼핑'
+      };
+      return categoryNames[category] || '📝 일반';
+    }
+
+    // 메모 저장/로드
+    function saveMemos() {
+      if (settings.autoSave) {
+        localStorage.setItem('aviss_memos', JSON.stringify(memos));
+      }
+    }
+
+    function loadMemos() {
+      const savedMemos = localStorage.getItem('aviss_memos');
+      if (savedMemos) {
+        memos.push(...JSON.parse(savedMemos));
+      }
+    }
+
+    // === 기존 캘린더 관련 함수들 ===
+    
+    // 캘린더 렌더링
+    function renderCalendar() {
+      const grid = document.getElementById('calendar-grid');
+      const monthYear = document.getElementById('month-year');
+      
+      const year = current.getFullYear();
+      const month = current.getMonth();
+      
+      monthYear.textContent = `${year} /${month + 1}`;
+      grid.innerHTML = '';
+      
+      // 요일 헤더
+      ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
+        const dayHeader = document.createElement('div');
+        dayHeader.className = 'calendar-cell';
+        dayHeader.innerHTML = `<div class="date-num" style="text-align: center; font-weight: bold;">${day}</div>`;
+        dayHeader.style.background = '#f0f0f0';
+        dayHeader.style.cursor = 'default';
+        grid.appendChild(dayHeader);
+      });
+      
+      const firstDay = new Date(year, month, 1).getDay();
+      const lastDate = new Date(year, month + 1, 0).getDate();
+      
+      // 빈 셀 추가
+      for (let i = 0; i < firstDay; i++) {
+        const emptyCell = document.createElement('div');
+        emptyCell.className = 'calendar-cell';
+        emptyCell.style.visibility = 'hidden';
+        grid.appendChild(emptyCell);
+      }
+      
+      // 날짜 셀 생성
+      for (let date = 1; date <= lastDate; date++) {
+        const cell = document.createElement('div');
+        cell.className = 'calendar-cell';
+        
+        const cellDate = new Date(year, month, date);
+        const dateNum = document.createElement('div');
+        dateNum.className = 'date-num';
+        dateNum.textContent = date;
+        cell.appendChild(dateNum);
+        
+        // 오늘 날짜 표시
+        if (cellDate.toDateString() === new Date().toDateString()) {
+          cell.classList.add('today');
+        }
+        
+        // 이벤트 표시
+        const key = formatDateKey(cellDate);
+        if (events[key]) {
+          events[key].forEach(event => {
+            const eventDiv = document.createElement('div');
+            const categoryClass = categories[event.category]?.color || 'default';
+            eventDiv.className = `event ${categoryClass}`;
+            
+            const timePrefix = event.time ? `${event.time} ` : '';
+            const icon = categories[event.category]?.icon || '📝';
+            eventDiv.textContent = `${icon} ${timePrefix}${event.desc}`;
+            eventDiv.title = `${event.desc} (${event.category})`;
+            
+            cell.appendChild(eventDiv);
+          });
+        }
+        
+        // 셀 클릭 이벤트 추가
+        cell.addEventListener('click', () => openModal(cellDate));
+        
+        grid.appendChild(cell);
+      }
+    }
+
+    // 모달 열기
+    function openModal(date) {
+      const modal = document.getElementById('event-modal');
+      const modalTitle = document.getElementById('modal-title');
+      const modalEvents = document.getElementById('modal-events');
+      
+      const dateStr = formatDateString(date);
+      const key = formatDateKey(date);
+      const dayEvents = events[key] || [];
+      
+      modalTitle.textContent = `📅 ${dateStr}`;
+      modalEvents.innerHTML = '';
+      
+      if (dayEvents.length === 0) {
+        modalEvents.innerHTML = '<div class="no-events">📝 no data</div>';
+      } else {
+        dayEvents.forEach((event, index) => {
+          const eventItem = document.createElement('div');
+          const categoryClass = categories[event.category]?.color || 'default';
+          eventItem.className = `event-item ${categoryClass}`;
+          
+          const categoryIcon = categories[event.category]?.icon || '📝';
+          const timeStr = event.time ? `⏰ ${event.time}` : '⏰ no time data';
+          
+          eventItem.innerHTML = `
+            <div class="event-info">
+              <div class="event-desc">${categoryIcon} ${event.desc}</div>
+              <div class="event-details">${timeStr} • ${event.category}</div>
+            </div>
+            <button class="delete-btn" onclick="deleteEvent('${key}', ${index})" title="trash">🗑️</button>
+          `;
+          
+          modalEvents.appendChild(eventItem);
+        });
+      }
+      
+      modal.style.display = 'block';
+      updateStatus(`${dateStr} 일정을 확인 중입니다.`);
+    }
+
+    // 모달 닫기
+    function closeModal() {
+      document.getElementById('event-modal').style.display = 'none';
+      updateStatus('캘린더 보기로 돌아왔습니다.');
+    }
+
+    // 일정 삭제
+    function deleteEvent(dateKey, index) {
+      if (confirm('이 일정을 삭제하시겠습니까?')) {
+        const deletedEvent = events[dateKey][index];
+        events[dateKey].splice(index, 1);
+        
+        // 해당 날짜에 이벤트가 없으면 키 삭제
+        if (events[dateKey].length === 0) {
+          delete events[dateKey];
+        }
+        
+        saveEvents();
+        renderCalendar();
+        updateStats();
+        
+        // 모달 내용 다시 로드
+        const [year, month, day] = dateKey.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        openModal(date);
+        
+        addChatMessage('bot', `🤖 "${deletedEvent.desc}" data trashed.`);
+        updateStatus(`일정이 삭제되었습니다: ${deletedEvent.desc}`);
+      }
+    }
+
+    // 통계 업데이트
+    function updateStats() {
+      const today = new Date();
+      const thisMonth = today.getMonth();
+      const thisYear = today.getFullYear();
+      
+      let monthlyCount = 0;
+      let weeklyCount = 0;
+      let todayCount = 0;
+      
+      const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+      
+      Object.keys(events).forEach(key => {
+        const [year, month, day] = key.split('-').map(Number);
+        const eventDate = new Date(year, month - 1, day);
+        
+        if (year === thisYear && month - 1 === thisMonth) {
+          monthlyCount += events[key].length;
+        }
+        
+        if (eventDate >= today && eventDate <= weekFromNow) {
+          weeklyCount += events[key].length;
+        }
+        
+        if (eventDate.toDateString() === today.toDateString()) {
+          todayCount += events[key].length;
+        }
+      });
+      
+      document.getElementById('schedule-stats').innerHTML = `
+        <span class="stats-item">📅 이번 달: ${monthlyCount}개</span>
+        <span class="stats-item">📆 이번 주: ${weeklyCount}개</span>
+        <span class="stats-item">📋 오늘: ${todayCount}개</span>
+      `;
+    }
+
+    // 월 변경
+    function changeMonth(delta) {
+      current.setMonth(current.getMonth() + delta);
+      renderCalendar();
+      updateStats();
+    }
+
+    // 채팅 초기화
+    function clearChat() {
+      if (confirm('대화 내용을 모두 삭제하시겠습니까?')) {
+        document.getElementById('chat-window').innerHTML = '';
+        addSampleData();
+        updateStatus('대화가 초기화되었습니다.');
+      }
+    }
+
+    // 데이터 저장/로드
+    function saveEvents() {
+      if (settings.autoSave) {
+        localStorage.setItem('aviss_events', JSON.stringify(events));
+        localStorage.setItem('aviss_settings', JSON.stringify(settings));
+      }
+    }
+
+    function loadEvents() {
+      const savedEvents = localStorage.getItem('aviss_events');
+      const savedSettings = localStorage.getItem('aviss_settings');
+      
+      if (savedEvents) {
+        Object.assign(events, JSON.parse(savedEvents));
+      }
+      
+      if (savedSettings) {
+        Object.assign(settings, JSON.parse(savedSettings));
+      }
+    }
+
+    // 자동 저장
+    function autoSave() {
+      setInterval(() => {
+        saveEvents();
+        saveMemos();
+      }, 30000); // 30초마다 자동 저장
+    }
+
+    // 데이터 내보내기
+    function exportData() {
+      const data = {
+        events: events,
+        memos: memos,
+        settings: settings,
+        exportDate: new Date()
+      };
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `aviss_backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      updateStatus('데이터가 내보내기되었습니다.');
+    }
+
+    // 데이터 가져오기
+    function importData() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = JSON.parse(e.target.result);
+            if (data.events && data.settings) {
+              Object.assign(events, data.events);
+              Object.assign(settings, data.settings);
+              if (data.memos) {
+                memos.length = 0;
+                memos.push(...data.memos);
+              }
+              saveEvents();
+              saveMemos();
+              applySettings();
+              renderCalendar();
+              renderMemos();
+              updateStats();
+              updateMemoStats();
+              addChatMessage('bot', '🤖 데이터를 성공적으로 가져왔습니다!');
+              updateStatus('데이터를 성공적으로 가져왔습니다.');
+            } else {
+              throw new Error('잘못된 파일 형식');
+            }
+          } catch (error) {
+            alert('파일을 읽을 수 없습니다.');
+            updateStatus('데이터 가져오기에 실패했습니다.');
+          }
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    }
+
+    // 모든 데이터 삭제
+    function clearAllData() {
+      if (confirm('모든 일정, 메모, 설정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+        localStorage.removeItem('aviss_events');
+        localStorage.removeItem('aviss_memos');
+        localStorage.removeItem('aviss_settings');
+        Object.keys(events).forEach(key => delete events[key]);
+        memos.length = 0;
+        location.reload();
+      }
+    }
+
+    function addSampleData() {
+      addChatMessage('bot', '🤖 안녕하세요! AVISS입니다. 새로운 일정을 말씀해주세요!');
+      addChatMessage('bot', '🤖 💡 팁: "업무 메모 추가 프로젝트 아이디어" 같은 식으로 메모도 추가할 수 있어요!');
+      
+      // 샘플 메모 추가 (처음 실행시에만)
+      if (memos.length === 0) {
+        const sampleMemos = [
+          
+        ];
+        
+        memos.push(...sampleMemos);
+        saveMemos();
+      }
+    }
+
+    // 유틸리티 함수들
+    function formatDateKey(date) {
+      return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+    }
+
+    function formatDateString(date) {
+      return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+    }
+
+    // 성능 측정 함수 (개발용)
+    function measurePerformance(testInput = "6월 15일 3시 치과") {
+      const start = performance.now();
+      parseMsg(testInput);
+      const end = performance.now();
+      console.log(`자연어 처리 성능: ${(end - start).toFixed(2)}ms`);
+      return end - start;
+    }
+
+    // ESC 키로 모달 닫기
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeModal();
+        closeMemoModal();
+      }
+    });
+
+    // 개발자 콘솔용 함수들
+    window.avissDebug = {
+      measurePerformance,
+      showEvents: () => console.table(events),
+      showMemos: () => console.table(memos),
+      showSettings: () => console.log(settings),
+      addTestData: addSampleData
+    };
+  </script>
+</body>
+</html>
