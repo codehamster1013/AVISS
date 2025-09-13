@@ -1272,14 +1272,7 @@
       thisWeek.setDate(thisWeek.getDate() - 7);
       const recentMemos = memos.filter(m => new Date(m.created) >= thisWeek).length;
       
-      document.getElementById('memo-stats').innerHTML = `
-        <span class="stats-item">📝 전체: ${totalMemos}개</span>
-        <span class="stats-item">💼 업무: ${workMemos}개</span>
-        <span class="stats-item">👤 개인: ${personalMemos}개</span>
-        <span class="stats-item">💡 아이디어: ${ideaMemos}개</span>
-        <span class="stats-item">🛒 쇼핑: ${shoppingMemos}개</span>
-        <span class="stats-item">📊 최근 7일: ${recentMemos}개</span>
-      `;
+    
     }
 
     // 카테고리 이름 반환
